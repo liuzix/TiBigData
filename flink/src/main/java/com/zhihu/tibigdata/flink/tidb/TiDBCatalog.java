@@ -53,6 +53,7 @@ import org.apache.flink.table.catalog.stats.CatalogColumnStatistics;
 import org.apache.flink.table.catalog.stats.CatalogTableStatistics;
 import org.apache.flink.table.expressions.Expression;
 import org.apache.flink.table.factories.Factory;
+import org.apache.flink.table.types.DataType;
 import org.apache.flink.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -278,7 +279,7 @@ public class TiDBCatalog extends AbstractCatalog {
   @Override
   public CatalogFunction getFunction(ObjectPath functionPath)
       throws FunctionNotExistException, CatalogException {
-    throw new UnsupportedOperationException();
+    throw new FunctionNotExistException(this.getName(), functionPath);
   }
 
   @Override
@@ -361,8 +362,19 @@ public class TiDBCatalog extends AbstractCatalog {
         .getTableMust(databaseName, tableName)
         .getColumns()
         .stream()
-        .reduce(TableSchema.builder(), (builder, c) -> builder.field(c.getName(),
-            TypeUtils.getFlinkType(c.getType())), (builder1, builder2) -> null).build();
+        .reduce(TableSchema.builder(), (builder, c) -> {
+          DataType flinkType = TypeUtils.getFlinkType(c.getType());
+          if (c.getType().isNotNull()) {
+            flinkType = flinkType.notNull();
+          }
+
+          builder.field(c.getName(), flinkType);
+
+          if (c.isPrimaryKey()) {
+            builder.primaryKey(c.getName());
+          }
+          return builder;
+        }, (builder1, builder2) -> null).build();
   }
 
   @Override

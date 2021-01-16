@@ -25,17 +25,18 @@ import org.apache.flink.api.common.functions.FlatMapFunction;
 import org.apache.flink.api.common.typeinfo.TypeHint;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.java.typeutils.RowTypeInfo;
+import org.apache.flink.table.data.GenericRowData;
+import org.apache.flink.table.data.RowData;
 import org.apache.flink.table.types.DataType;
-import org.apache.flink.types.Row;
 import org.apache.flink.types.RowKind;
 import org.apache.flink.util.Collector;
 import org.tikv.common.meta.TiColumnInfo;
 
-import java.util.ArrayList;
+import java.sql.Timestamp;
 import java.util.List;
 import java.util.Map;
 
-public class TiCDCEventToRowFlatMap implements FlatMapFunction<TiCDCEvent, Row> {
+public class TiCDCEventToRowFlatMap implements FlatMapFunction<TiCDCEvent, RowData> {
     private final Map<String, Integer> nameToPosMap;
 
     private final RowTypeInfo rowTypeInfo;
@@ -43,20 +44,26 @@ public class TiCDCEventToRowFlatMap implements FlatMapFunction<TiCDCEvent, Row> 
     public TiCDCEventToRowFlatMap(Map<String, String> properties, String tableName) {
         List<TiColumnInfo> columnInfos = TiCDCUtils.getTiDBSchema(properties, tableName);
         ImmutableMap.Builder<String, Integer> builder = ImmutableMap.builder();
-        TypeInformation<?>[] typeInfos = new TypeInformation<?>[columnInfos.size()];
-        String[] names = new String[columnInfos.size()];
+        TypeInformation<?>[] typeInfos = new TypeInformation<?>[columnInfos.size() + 1];
+        String[] names = new String[columnInfos.size() + 1];
         for (int i = 0; i < columnInfos.size(); i++) {
             builder.put(columnInfos.get(i).getName(), i);
             DataType flinkType = TypeUtils.getFlinkType(columnInfos.get(i).getType());
             typeInfos[i] = TypeInformation.of(flinkType.getConversionClass());
             names[i] = columnInfos.get(i).getName();
         }
+
+        builder.put("rowtime", columnInfos.size());
+        typeInfos[columnInfos.size()] = TypeInformation.of(Timestamp.class);
+        names[columnInfos.size()] = "rowtime";
+
         this.nameToPosMap = builder.build();
+
         this.rowTypeInfo = new RowTypeInfo(typeInfos, names);
     }
 
     @Override
-    public void flatMap(TiCDCEvent value, Collector<Row> out) throws Exception {
+    public void flatMap(TiCDCEvent value, Collector<RowData> out) throws Exception {
         if (value.getTiCDCEventValue().getType() != TiCDCEventType.rowChange) {
             return;
         }
@@ -72,13 +79,14 @@ public class TiCDCEventToRowFlatMap implements FlatMapFunction<TiCDCEvent, Row> 
         }
 
         int rowSize = rowChangeEvent.getColumns().size();
-        Row row = new Row(rowKind, rowSize);
+        GenericRowData row = new GenericRowData(rowKind, rowSize + 1);
         for (int i = 0; i < rowSize; i++) {
             TiCDCEventColumn column = rowChangeEvent.getColumns().get(i);
             int pos = this.nameToPosMap.get(column.getName());
             row.setField(pos, column.getV());
         }
 
+        row.setField(rowSize, new Timestamp(value.getTiCDCEventKey().getTs()));
         out.collect(row);
     }
 

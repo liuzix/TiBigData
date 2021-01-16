@@ -3,6 +3,9 @@ package com.pingcap.flink.ticdc.schema;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.pingcap.flink.ticdc.KafkaMessage;
+import org.apache.flink.table.data.StringData;
+import org.apache.flink.table.data.binary.BinaryStringData;
+import org.apache.flink.table.data.util.DataFormatConverters;
 
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
@@ -146,11 +149,16 @@ public class TiCDCEventDecoder implements Iterator<TiCDCEvent> {
                 // TiCDC idiosyncrasy
                 if (typeCode >= 249 && typeCode <= 252) {
                     byte[] decoded = Base64.getDecoder().decode((String) columnObj.get("v"));
-                    column.setV(new String(decoded, StandardCharsets.ISO_8859_1));
+                    StringData stringData = StringData.fromBytes(decoded);
+                    column.setV(stringData);
+                } else if (columnObj.get("v") instanceof String){
+                    String str = (String) columnObj.get("v");
+                    StringData stringData = StringData.fromString(str);
+                    column.setV(stringData);
                 } else {
                     column.setV(columnObj.get("v"));
                 }
-                column.setV(columnObj.get("v"));
+
                 column.setName(col);
                 columns.add(column);
             }

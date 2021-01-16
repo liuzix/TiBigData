@@ -34,6 +34,7 @@ import java.util.Map;
 
 public class TiCDCStreamTableDemo {
     public static void main(String[] args) throws Exception {
+        /*
         org.apache.log4j.BasicConfigurator.configure();
         Logger.getRootLogger().setLevel(Level.WARN);
 
@@ -57,7 +58,9 @@ public class TiCDCStreamTableDemo {
         DataStream<Row> stream2 = streamProvider.CreateIncrementalStream("testdb.test2", startTs).flatMap(flatMap2).returns(flatMap2.getTypeInfo());
         tableEnvironment.createTemporaryView("test2", stream2);
 
-        tableEnvironment.sqlQuery("select test.id, `value` from test, test2 where test.id = test2.id").execute().print();
+        tableEnvironment.sqlQuery("select test.id, `value` from test left join test2 on test.id = test2.id").execute().print();
         env.execute();
+
+         */
     }
 }

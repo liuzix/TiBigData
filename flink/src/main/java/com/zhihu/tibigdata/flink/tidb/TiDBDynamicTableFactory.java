@@ -22,6 +22,8 @@ import static com.zhihu.tibigdata.tidb.ClientConfig.TIDB_DRIVER_NAME;
 import static org.apache.flink.util.Preconditions.checkArgument;
 
 import com.google.common.collect.ImmutableSet;
+import com.pingcap.flink.ticdc.TiCDCDataStreamScanProvider;
+import com.pingcap.flink.ticdc.TiCDCDynamicTableSource;
 import com.zhihu.tibigdata.jdbc.TiDBDriver;
 import com.zhihu.tibigdata.tidb.ClientConfig;
 import com.zhihu.tibigdata.tidb.ClientSession;
@@ -45,8 +47,11 @@ import org.apache.flink.table.connector.source.DynamicTableSource;
 import org.apache.flink.table.factories.DynamicTableSinkFactory;
 import org.apache.flink.table.factories.DynamicTableSourceFactory;
 import org.apache.flink.table.factories.FactoryUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TiDBDynamicTableFactory implements DynamicTableSourceFactory, DynamicTableSinkFactory {
+  static final Logger LOG = LoggerFactory.getLogger(TiDBDynamicTableFactory.class);
 
   public static final String IDENTIFIER = "tidb";
 
@@ -123,6 +128,11 @@ public class TiDBDynamicTableFactory implements DynamicTableSourceFactory, Dynam
 
   @Override
   public DynamicTableSource createDynamicTableSource(Context context) {
+    Map<String, String> properties = context.getCatalogTable().toProperties();
+    if (context.getCatalogTable().toProperties().getOrDefault("tidb.cdc.source.enabled", "false").equals("true")) {
+      LOG.info("Using TiCDC as dynamic table source");
+      return new TiCDCDynamicTableSource(context.getCatalogTable().toProperties(), context.getCatalogTable().getSchema());
+    }
     return new TiDBDynamicTableSource(context.getCatalogTable().getSchema(),
         context.getCatalogTable().toProperties());
   }
