@@ -131,6 +131,8 @@ public class TiDBDynamicTableFactory implements DynamicTableSourceFactory, Dynam
     Map<String, String> properties = context.getCatalogTable().toProperties();
     if (context.getCatalogTable().toProperties().getOrDefault("tidb.cdc.source.enabled", "false").equals("true")) {
       LOG.info("Using TiCDC as dynamic table source");
+      DynamicTableSource historicalDataSource = new TiDBDynamicTableSource(context.getCatalogTable().getSchema(),
+              context.getCatalogTable().toProperties());
       return new TiCDCDynamicTableSource(context.getCatalogTable().toProperties(), context.getCatalogTable().getSchema());
     }
     return new TiDBDynamicTableSource(context.getCatalogTable().getSchema(),

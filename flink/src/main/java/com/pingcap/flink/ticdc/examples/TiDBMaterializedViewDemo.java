@@ -4,6 +4,8 @@ import com.zhihu.tibigdata.flink.tidb.TiDBCatalog;
 import org.apache.flink.api.java.utils.ParameterTool;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.api.EnvironmentSettings;
+import org.apache.flink.table.api.PlannerConfig;
+import org.apache.flink.table.api.TableConfig;
 import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -27,6 +29,7 @@ public class TiDBMaterializedViewDemo {
                 .inStreamingMode().build();
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         StreamTableEnvironment tableEnvironment = StreamTableEnvironment.create(env, settings);
+
         // register TiDBCatalog
         TiDBCatalog catalog = new TiDBCatalog(properties);
         catalog.open();
@@ -34,6 +37,8 @@ public class TiDBMaterializedViewDemo {
 
         tableEnvironment.useCatalog("tidb");
         tableEnvironment.useDatabase("testdb");
+        String explanation = tableEnvironment.explainSql(sql);
+        System.out.println(explanation);
         tableEnvironment.sqlQuery(sql).executeInsert(target);
     }
 }
