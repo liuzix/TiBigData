@@ -18,8 +18,8 @@ public class TiDBMaterializedViewDemo {
 
         ParameterTool parameterTool = ParameterTool.fromArgs(args);
         final Map<String, String> properties = new HashMap<>(parameterTool.toMap());
-        //final String sql = parameterTool.getRequired("tidb.materialized.query");
-        //final String target = parameterTool.getRequired("tidb.materialized.target");
+        final String sql = parameterTool.getRequired("tidb.materialized.query");
+        final String target = parameterTool.getRequired("tidb.materialized.target");
         properties.put("tidb.cdc.source.enabled", "true");
         properties.put("tidb.write_mode", "upsert");
 
@@ -34,6 +34,6 @@ public class TiDBMaterializedViewDemo {
 
         tableEnvironment.useCatalog("tidb");
         tableEnvironment.useDatabase("testdb");
-        tableEnvironment.sqlQuery("select test.id as id, `value` from test, test2 where test.id = test2.id").executeInsert("test_view");
+        tableEnvironment.sqlQuery(sql).executeInsert(target);
     }
 }

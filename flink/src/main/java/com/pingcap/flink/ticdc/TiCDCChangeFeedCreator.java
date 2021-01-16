@@ -52,7 +52,7 @@ public class TiCDCChangeFeedCreator {
     }
 
     public String createChangeFeed(String tableName, TiTimestamp startTs) throws IOException, InterruptedException {
-        String changeFeedName = tableName.replace('.', '-') + "-" + startTs.getVersion();
+        String changeFeedName = tableName.replace('.', '-').replace("_", "-") + "-" + startTs.getVersion();
         if (this.checkChangeFeedExists(changeFeedName)) {
             return changeFeedName;
         }
