@@ -53,7 +53,11 @@ public class TiCDCStreamTableDemo {
         DataStream<Row> stream = streamProvider.CreateIncrementalStream("testdb.test", startTs).flatMap(flatMap).returns(flatMap.getTypeInfo());
         tableEnvironment.createTemporaryView("test", stream);
 
-        tableEnvironment.sqlQuery("select * from test").execute().print();
+        TiCDCEventToRowFlatMap flatMap2 = new TiCDCEventToRowFlatMap(properties, "testdb.test2");
+        DataStream<Row> stream2 = streamProvider.CreateIncrementalStream("testdb.test2", startTs).flatMap(flatMap2).returns(flatMap2.getTypeInfo());
+        tableEnvironment.createTemporaryView("test2", stream2);
+
+        tableEnvironment.sqlQuery("select test.id, `value` from test, test2 where test.id = test2.id").execute().print();
         env.execute();
     }
 }

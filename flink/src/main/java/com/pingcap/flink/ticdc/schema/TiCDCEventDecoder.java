@@ -10,6 +10,7 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Iterator;
 import java.util.List;
 
@@ -140,7 +141,15 @@ public class TiCDCEventDecoder implements Iterator<TiCDCEvent> {
                 JSONObject columnObj = row.getJSONObject(col);
                 TiCDCEventColumn column = new TiCDCEventColumn();
                 column.setH(columnObj.getBooleanValue("h"));
-                column.setT(columnObj.getIntValue("t"));
+                int typeCode = columnObj.getIntValue("t");
+                column.setT(typeCode);
+                // TiCDC idiosyncrasy
+                if (typeCode >= 249 && typeCode <= 252) {
+                    byte[] decoded = Base64.getDecoder().decode((String) columnObj.get("v"));
+                    column.setV(new String(decoded, StandardCharsets.ISO_8859_1));
+                } else {
+                    column.setV(columnObj.get("v"));
+                }
                 column.setV(columnObj.get("v"));
                 column.setName(col);
                 columns.add(column);
